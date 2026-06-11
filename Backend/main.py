@@ -18,7 +18,8 @@ from rag import search_docs
 from auth import create_token, decode_token, SESSION_SECRET, FRONTEND_URL
 
 app = FastAPI(title="Delivery AI Assistant")
-app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET)
+app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET,
+                   same_site="lax", https_only=True)
 app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )
@@ -48,11 +49,37 @@ async def auth_google(request: Request):
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 
+async def _exchange_code_manually(request: Request) -> dict:
+    # Session cookie алдагдсан үед (cross-site redirect) authlib-ийн state
+    # шалгалт унадаг тул code-ийг Google-тэй шууд солилцоно.
+    import httpx
+    code         = request.query_params.get("code", "")
+    redirect_uri = str(request.base_url).rstrip("/") + "/auth/callback"
+    async with httpx.AsyncClient() as client:
+        r = await client.post("https://oauth2.googleapis.com/token", data={
+            "code":          code,
+            "client_id":     os.getenv("GOOGLE_CLIENT_ID", ""),
+            "client_secret": os.getenv("GOOGLE_CLIENT_SECRET", ""),
+            "redirect_uri":  redirect_uri,
+            "grant_type":    "authorization_code",
+        })
+        r.raise_for_status()
+        access_token = r.json()["access_token"]
+        ui = await client.get("https://openidconnect.googleapis.com/v1/userinfo",
+                              headers={"Authorization": f"Bearer {access_token}"})
+        ui.raise_for_status()
+        return ui.json()
+
+
 @app.get("/auth/callback")
 async def auth_callback(request: Request):
     try:
-        token     = await oauth.google.authorize_access_token(request)
-        user_info = token.get("userinfo") or {}
+        try:
+            token     = await oauth.google.authorize_access_token(request)
+            user_info = token.get("userinfo") or {}
+        except Exception as e:
+            print(f"[AUTH] ⚠️ State шалгалт унав ({e}) — code-оор шууд солилцоно")
+            user_info = await _exchange_code_manually(request)
         google_id = user_info.get("sub", "")
         email     = user_info.get("email", "")
         name      = user_info.get("name", email.split("@")[0])
