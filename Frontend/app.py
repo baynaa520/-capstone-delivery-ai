@@ -1,9 +1,10 @@
+import os
 import uuid
 import requests
 import streamlit as st
 import pandas as pd
 
-API_URL   = "http://localhost:8000"
+API_URL = st.secrets.get("API_URL", os.getenv("API_URL", "http://localhost:8000"))
 ROLE_INFO = {
     "CUSTOMER": ("📦", "Бараа авах хэрэглэгч", "#63b3ed"),
     "SHOP":     ("🏪", "Online дэлгүүр",        "#68d391"),
