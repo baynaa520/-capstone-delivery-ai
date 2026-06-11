@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html class="dark" lang="mn">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Delivery AI | Хурдан. Найдвартай. Ухаалаг.</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@500&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "surface-variant": "#313539",
+          "secondary-container": "#00864d",
+          "on-secondary": "#00391d",
+          "tertiary": "#ffb967",
+          "surface-container-low": "#181c20",
+          "surface-bright": "#363a3d",
+          "outline-variant": "#40484f",
+          "surface-container": "#1c2024",
+          "primary": "#90cdff",
+          "background": "#101417",
+          "surface-container-lowest": "#0b0f12",
+          "secondary": "#70db99",
+          "inverse-primary": "#006494",
+          "surface-dim": "#101417",
+          "on-surface": "#e0e2e7",
+          "surface-container-highest": "#313539",
+          "on-primary": "#00344f",
+          "on-error-container": "#ffdad6",
+          "primary-fixed-dim": "#8ecdff",
+          "surface-container-high": "#272a2e",
+          "error": "#ffb4ab",
+          "primary-fixed": "#cbe6ff",
+          "on-background": "#e0e2e7",
+          "surface": "#101417",
+          "on-secondary-container": "#f6fff4",
+          "on-error": "#690005",
+          "on-primary-fixed": "#001e30",
+          "inverse-on-surface": "#2d3135",
+          "outline": "#8a929a",
+          "error-container": "#93000a",
+          "inverse-surface": "#e0e2e7",
+          "primary-container": "#63b3ed",
+          "tertiary-container": "#e39d47",
+          "on-primary-container": "#004466",
+          "on-surface-variant": "#bfc7d1"
+        },
+        borderRadius: {
+          DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px"
+        },
+        spacing: {
+          "container-max": "1280px",
+          "margin-mobile": "20px",
+          "unit": "8px",
+          "gutter": "24px",
+          "margin-desktop": "64px"
+        },
+        fontFamily: {
+          "body-md": ["Inter"],
+          "label-md": ["JetBrains Mono"],
+          "label-sm": ["JetBrains Mono"],
+          "headline-sm": ["Plus Jakarta Sans"],
+          "headline-md": ["Plus Jakarta Sans"],
+          "display-lg": ["Plus Jakarta Sans"],
+          "body-lg": ["Inter"]
+        },
+        fontSize: {
+          "body-md": ["16px", {lineHeight:"1.6",fontWeight:"400"}],
+          "label-md": ["14px", {lineHeight:"1.2",letterSpacing:"0.05em",fontWeight:"500"}],
+          "label-sm": ["12px", {lineHeight:"1.2",letterSpacing:"0.05em",fontWeight:"500"}],
+          "headline-sm": ["24px", {lineHeight:"1.4",fontWeight:"600"}],
+          "headline-md": ["32px", {lineHeight:"1.3",fontWeight:"700"}],
+          "display-lg": ["64px", {lineHeight:"1.1",letterSpacing:"-0.02em",fontWeight:"800"}],
+          "body-lg": ["18px", {lineHeight:"1.6",fontWeight:"400"}]
+        }
+      }
+    }
+  }
+</script>
+<style>
+  @keyframes fadeInUp {
+    from { opacity:0; transform:translateY(30px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .animate-fade-in-up { animation: fadeInUp 1s ease-out forwards; }
+  .glass-card {
+    background: rgba(25,29,38,0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .glass-card:hover {
+    border-color: rgba(99,179,237,0.4);
+    transform: scale(1.02);
+    transition: all 0.3s ease;
+  }
+  .bg-obsidian { background-color: #0f1117; }
+  .neon-glow   { box-shadow: 0 0 20px rgba(99,179,237,0.4); }
+
+  /* Chat scrollbar */
+  .chat-messages::-webkit-scrollbar { width:4px; }
+  .chat-messages::-webkit-scrollbar-track { background: transparent; }
+  .chat-messages::-webkit-scrollbar-thumb { background: rgba(144,205,255,0.3); border-radius:2px; }
+
+  /* Typing dots */
+  @keyframes dot { 0%,80%,100%{transform:scale(0)} 40%{transform:scale(1)} }
+  .typing-dot:nth-child(1){animation:dot 1.4s ease-in-out 0s infinite}
+  .typing-dot:nth-child(2){animation:dot 1.4s ease-in-out 0.2s infinite}
+  .typing-dot:nth-child(3){animation:dot 1.4s ease-in-out 0.4s infinite}
+</style>
+</head>
+<body class="bg-obsidian text-on-surface font-body-md selection:bg-primary selection:text-on-primary overflow-x-hidden">
+
+<!-- ═══ 1. NAVBAR ═══ -->
+<nav class="fixed top-0 w-full z-50 bg-surface/70 backdrop-blur-xl border-b border-white/10 shadow-sm transition-all duration-300" id="navbar">
+  <div class="flex justify-between items-center px-margin-desktop py-4 max-w-container-max mx-auto">
+    <div class="font-headline-sm text-headline-sm font-bold text-on-surface flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary" style="font-variation-settings:'FILL' 1;">local_shipping</span>
+      Delivery AI
+    </div>
+    <div class="hidden md:flex gap-8 items-center">
+      <a class="font-body-md text-primary font-bold border-b-2 border-primary pb-1" href="#">Нүүр</a>
+      <a class="font-body-md text-on-surface-variant hover:text-primary transition-colors" href="#services">Үйлчилгээ</a>
+      <a class="font-body-md text-on-surface-variant hover:text-primary transition-colors" href="#how">Хэрхэн ажилладаг</a>
+      <a class="font-body-md text-on-surface-variant hover:text-primary transition-colors" href="#contact">Холбоо барих</a>
+    </div>
+    <a href="https://capstone-delivery-ai-gdwaqjxzaurcphmcp3kwsk.streamlit.app" target="_blank"
+       class="bg-primary-container text-on-primary-container px-6 py-2 rounded-lg font-bold hover:scale-105 transition-transform neon-glow">
+      Нэвтрэх
+    </a>
+  </div>
+</nav>
+
+<!-- ═══ 2. HERO ═══ -->
+<header class="relative w-full h-screen flex items-center justify-center overflow-hidden">
+  <div class="absolute inset-0 w-full h-full z-0">
+    <canvas id="hero-canvas" style="display:block;width:100%;height:100%"></canvas>
+    <script>
+    (function(){
+      const c=document.getElementById('hero-canvas');
+      function sync(){const w=c.clientWidth||1280,h=c.clientHeight||720;if(c.width!==w||c.height!==h){c.width=w;c.height=h;}}
+      if(typeof ResizeObserver!=='undefined')new ResizeObserver(sync).observe(c);
+      sync();
+      const gl=c.getContext('webgl');
+      if(!gl)return;
+      const vs=`attribute vec2 a;varying vec2 v;void main(){v=a*.5+.5;gl_Position=vec4(a,0,1);}`;
+      const fs=`precision highp float;varying vec2 v;uniform float t;
+      void main(){
+        float n=sin(v.x*3.+t*.5)*cos(v.y*3.+t*.4)+sin(v.x*5.-t*.7)*cos(v.y*2.+t*.3)*.5;
+        vec3 c1=vec3(.059,.067,.090),c2=vec3(.1,.15,.25),c3=vec3(.15,.2,.4);
+        vec3 col=mix(c1,c2,n*.5+.5);col=mix(col,c3,v.y*.3);
+        float d=length(v-.5);col+=vec3(.1,.2,.4)*(1.-smoothstep(0.,.8,d))*.2;
+        gl_FragColor=vec4(col,1);}`;
+      function mk(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);return s;}
+      const p=gl.createProgram();
+      gl.attachShader(p,mk(gl.VERTEX_SHADER,vs));
+      gl.attachShader(p,mk(gl.FRAGMENT_SHADER,fs));
+      gl.linkProgram(p);gl.useProgram(p);
+      const b=gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER,b);
+      gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+      const pos=gl.getAttribLocation(p,'a');
+      gl.enableVertexAttribArray(pos);gl.vertexAttribPointer(pos,2,gl.FLOAT,false,0,0);
+      const uT=gl.getUniformLocation(p,'t');
+      function render(ts){sync();gl.viewport(0,0,c.width,c.height);if(uT)gl.uniform1f(uT,ts*.001);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(render);}
+      render(0);
+    })();
+    </script>
+  </div>
+  <div class="relative z-10 text-center max-w-4xl px-margin-mobile">
+    <h1 class="font-display-lg text-display-lg text-white mb-6 animate-fade-in-up">Хурдан. Найдвартай. Ухаалаг.</h1>
+    <p class="font-body-lg text-on-surface-variant mb-10 animate-fade-in-up" style="animation-delay:.2s;">
+      AI технологид суурилсан хүргэлтийн шийдэл — Бид таны ачааг хамгийн оновчтой замаар, хамгийн богино хугацаанд хүргэнэ.
+    </p>
+    <div class="flex flex-col md:flex-row gap-4 justify-center items-center animate-fade-in-up" style="animation-delay:.4s;">
+      <a href="https://capstone-delivery-ai-gdwaqjxzaurcphmcp3kwsk.streamlit.app" target="_blank"
+         class="bg-primary-container text-on-primary-container px-8 py-4 rounded-xl font-bold text-lg neon-glow hover:scale-105 transition-all">
+        Захиалга хянах
+      </a>
+      <a href="#contact"
+         class="border-2 border-primary text-primary px-8 py-4 rounded-xl font-bold text-lg bg-surface/20 backdrop-blur hover:bg-primary/10 transition-all">
+        Бидэнтэй холбогдох
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- ═══ 3. STATS ═══ -->
+<section class="relative z-20 -mt-20 px-margin-desktop max-w-container-max mx-auto">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-gutter">
+    <div class="glass-card p-6 rounded-xl text-center">
+      <div class="text-primary font-headline-md mb-2">10,000+</div>
+      <div class="text-on-surface-variant font-label-md">Захиалга</div>
+    </div>
+    <div class="glass-card p-6 rounded-xl text-center">
+      <div class="text-secondary font-headline-md mb-2">500+</div>
+      <div class="text-on-surface-variant font-label-md">Дэлгүүр</div>
+    </div>
+    <div class="glass-card p-6 rounded-xl text-center">
+      <div class="text-tertiary font-headline-md mb-2">98%</div>
+      <div class="text-on-surface-variant font-label-md">Цаг баримтлал</div>
+    </div>
+    <div class="glass-card p-6 rounded-xl text-center">
+      <div class="text-primary font-headline-md mb-2">24/7</div>
+      <div class="text-on-surface-variant font-label-md">Дэмжлэг</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 4. SERVICES ═══ -->
+<section class="py-32 px-margin-desktop max-w-container-max mx-auto" id="services">
+  <h2 class="font-display-lg text-headline-md text-center mb-16">Манай үйлчилгээ</h2>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+    <div class="glass-card p-8 rounded-2xl flex flex-col items-center text-center">
+      <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6 text-primary">
+        <span class="material-symbols-outlined text-4xl">rocket_launch</span>
+      </div>
+      <h3 class="font-headline-sm mb-4">Яаралтай хүргэлт</h3>
+      <p class="text-on-surface-variant">2 цагт хаана ч. Хотын төвийн яаралтай бичиг баримт болон жижиг ачаанд тохиромжтой.</p>
+    </div>
+    <div class="glass-card p-8 rounded-2xl flex flex-col items-center text-center">
+      <div class="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mb-6 text-secondary">
+        <span class="material-symbols-outlined text-4xl">inventory_2</span>
+      </div>
+      <h3 class="font-headline-sm mb-4">Өдрийн хүргэлт</h3>
+      <p class="text-on-surface-variant">Өнөөдөр захиалж, өнөөдөр аваарай. Өдөр тутмын хэрэгцээт барааг найдвартай хүргэнэ.</p>
+    </div>
+    <div class="glass-card p-8 rounded-2xl flex flex-col items-center text-center">
+      <div class="w-16 h-16 bg-tertiary/10 rounded-full flex items-center justify-center mb-6 text-tertiary">
+        <span class="material-symbols-outlined text-4xl">factory</span>
+      </div>
+      <h3 class="font-headline-sm mb-4">Бөөний хүргэлт</h3>
+      <p class="text-on-surface-variant">Том захиалгад тусгай үнэ. Аж ахуй нэгжүүдэд зориулсан нийлүүлэлтийн шийдэл.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 5. HOW IT WORKS ═══ -->
+<section class="py-24 bg-surface-container-lowest" id="how">
+  <div class="max-w-container-max mx-auto px-margin-desktop">
+    <h2 class="font-display-lg text-headline-md text-center mb-20">Хэрхэн ажилладаг вэ?</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
+      <div class="absolute top-10 left-0 w-full h-0.5 bg-white/5 hidden md:block z-0"></div>
+      <div class="relative z-10 flex flex-col items-center text-center">
+        <div class="w-20 h-20 rounded-full bg-primary flex items-center justify-center font-bold text-2xl text-on-primary mb-6 neon-glow">1</div>
+        <h4 class="font-headline-sm mb-2">Захиалга өгөх</h4>
+        <p class="text-on-surface-variant">Апп болон вэбээр мэдээллээ оруулна.</p>
+      </div>
+      <div class="relative z-10 flex flex-col items-center text-center">
+        <div class="w-20 h-20 rounded-full bg-secondary flex items-center justify-center font-bold text-2xl text-on-secondary mb-6 neon-glow">2</div>
+        <h4 class="font-headline-sm mb-2">Бид авдаг</h4>
+        <p class="text-on-surface-variant">Манай хүргэгч таны байрлалаас ачааг авна.</p>
+      </div>
+      <div class="relative z-10 flex flex-col items-center text-center">
+        <div class="w-20 h-20 rounded-full bg-tertiary flex items-center justify-center font-bold text-2xl text-on-tertiary mb-6 neon-glow">3</div>
+        <h4 class="font-headline-sm mb-2">Хаалган дээр хүргэдэг</h4>
+        <p class="text-on-surface-variant">Очих хаягт хамгийн богино хугацаанд хүрнэ.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 6. AI ASSISTANT SECTION ═══ -->
+<section class="py-32 px-margin-desktop max-w-container-max mx-auto overflow-hidden">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+    <div>
+      <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary font-label-md mb-6">
+        <span class="material-symbols-outlined text-sm">smart_toy</span>
+        УХААЛАГ ТУСЛАХ
+      </div>
+      <h2 class="font-display-lg text-headline-md mb-6">🤖 AI Туслах</h2>
+      <p class="font-body-lg text-on-surface-variant mb-8">
+        Манай AI систем таны захиалгын мэдээллийг шууд хариулна. Маршрут тооцоолох, үнэ бодох, байршил тогтооход танд тусална. Монгол хэлээр асуугаарай.
+      </p>
+      <button onclick="openChat()"
+        class="bg-primary text-on-primary px-8 py-4 rounded-xl font-bold flex items-center gap-3 neon-glow hover:scale-105 transition-all">
+        AI-тай ярих
+        <span class="material-symbols-outlined">arrow_forward</span>
+      </button>
+    </div>
+    <div class="relative">
+      <div class="glass-card rounded-3xl p-6 shadow-2xl relative z-10">
+        <div class="flex items-center gap-4 mb-6 border-b border-white/10 pb-4">
+          <div class="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-on-primary">
+            <span class="material-symbols-outlined">bolt</span>
+          </div>
+          <div>
+            <div class="font-bold">Delivery AI Bot</div>
+            <div class="text-xs text-secondary flex items-center gap-1">
+              <span class="w-2 h-2 bg-secondary rounded-full animate-pulse inline-block"></span> Online
+            </div>
+          </div>
+        </div>
+        <div class="space-y-4 h-52 overflow-y-auto mb-4">
+          <div class="flex justify-start">
+            <div class="bg-surface-variant p-3 rounded-2xl rounded-tl-none max-w-[80%] text-sm">
+              Сайн байна уу? Захиалгынхаа мэдээллийг асуугаарай 😊
+            </div>
+          </div>
+          <div class="flex justify-end">
+            <div class="bg-primary/20 border border-primary/30 p-3 rounded-2xl rounded-tr-none max-w-[80%] text-sm">
+              Миний захиалга хаана явж байна вэ?
+            </div>
+          </div>
+          <div class="flex justify-start">
+            <div class="bg-surface-variant p-3 rounded-2xl rounded-tl-none max-w-[80%] text-sm">
+              Таны #7482 захиалга Баянзүрх дүүрэгт хүргэлтэд явж байна. 15 минутын дараа очно 🚚
+            </div>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <input class="flex-1 bg-surface-container border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary/50"
+            placeholder="Асуултаа энд бичнэ үү..." type="text" readonly
+            onclick="openChat()"/>
+          <button onclick="openChat()" class="bg-primary p-3 rounded-xl text-on-primary">
+            <span class="material-symbols-outlined">send</span>
+          </button>
+        </div>
+      </div>
+      <div class="absolute -top-10 -right-10 w-64 h-64 bg-primary/20 rounded-full blur-[100px] z-0"></div>
+      <div class="absolute -bottom-10 -left-10 w-48 h-48 bg-secondary/10 rounded-full blur-[80px] z-0"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 7. CONTACT ═══ -->
+<section class="py-32 px-margin-desktop max-w-4xl mx-auto" id="contact">
+  <div class="glass-card p-12 rounded-3xl">
+    <h2 class="font-headline-md mb-8 text-center">Холбоо барих</h2>
+    <form class="space-y-6" onsubmit="return false;">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block font-label-md text-on-surface-variant mb-2">УТАСНЫ ДУГААР</label>
+          <input class="w-full bg-background/50 border border-white/10 rounded-xl px-4 py-4 text-on-surface focus:border-primary transition-all outline-none" placeholder="+976" type="tel"/>
+        </div>
+        <div>
+          <label class="block font-label-md text-on-surface-variant mb-2">И-МЭЙЛ ХАЯГ</label>
+          <input class="w-full bg-background/50 border border-white/10 rounded-xl px-4 py-4 text-on-surface focus:border-primary transition-all outline-none" placeholder="example@delivery.mn" type="email"/>
+        </div>
+      </div>
+      <div>
+        <label class="block font-label-md text-on-surface-variant mb-2">МЕССЕЖ</label>
+        <textarea class="w-full bg-background/50 border border-white/10 rounded-xl px-4 py-4 text-on-surface focus:border-primary transition-all outline-none" placeholder="Дэлгэрэнгүй мэдээллээ бичнэ үү..." rows="3"></textarea>
+      </div>
+      <button class="w-full bg-primary text-on-primary py-5 rounded-xl font-bold text-lg neon-glow hover:scale-[1.01] transition-all" type="submit">
+        Мэдээлэл илгээх
+      </button>
+    </form>
+  </div>
+</section>
+
+<!-- ═══ 8. FOOTER ═══ -->
+<footer class="bg-surface-container-lowest border-t border-outline-variant">
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-gutter px-margin-desktop py-16 max-w-container-max mx-auto">
+    <div class="space-y-4">
+      <div class="font-headline-sm text-primary font-bold">🚚 Delivery AI</div>
+      <p class="text-on-surface-variant text-sm">Монголын хамгийн анхны AI технологид суурилсан ухаалаг хүргэлтийн сүлжээ.</p>
+    </div>
+    <div class="space-y-4">
+      <h4 class="font-bold text-on-surface">Үндсэн</h4>
+      <ul class="space-y-2 text-on-surface-variant">
+        <li><a class="hover:text-secondary transition-colors" href="#">Нүүр</a></li>
+        <li><a class="hover:text-secondary transition-colors" href="#services">Үйлчилгээ</a></li>
+        <li><a class="hover:text-secondary transition-colors" href="#how">Хэрхэн ажилладаг</a></li>
+      </ul>
+    </div>
+    <div class="space-y-4">
+      <h4 class="font-bold text-on-surface">Хууль эрх зүй</h4>
+      <ul class="space-y-2 text-on-surface-variant">
+        <li><a class="hover:text-secondary transition-colors" href="#">Нууцлалын бодлого</a></li>
+        <li><a class="hover:text-secondary transition-colors" href="#">Үйлчилгээний нөхцөл</a></li>
+      </ul>
+    </div>
+    <div class="space-y-4">
+      <h4 class="font-bold text-on-surface">Холбоос</h4>
+      <div class="flex gap-3">
+        <a href="#" class="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-primary/20 transition-all text-sm">FB</a>
+        <a href="#" class="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-primary/20 transition-all text-sm">IG</a>
+        <a href="https://capstone-delivery-ai-gdwaqjxzaurcphmcp3kwsk.streamlit.app" target="_blank"
+           class="w-10 h-10 rounded-full border border-primary/30 flex items-center justify-center hover:bg-primary/20 transition-all text-primary text-xs font-bold">AI</a>
+      </div>
+    </div>
+  </div>
+  <div class="border-t border-white/5 py-8 text-center text-on-surface-variant text-sm">
+    © 2026 Delivery AI. Бүх эрх хуулиар хамгаалагдсан.
+  </div>
+</footer>
+
+<!-- ═══ 9. FLOATING CHAT PANEL (LIVE AI) ═══ -->
+<div class="fixed bottom-24 right-6 w-84 rounded-2xl bg-surface-container/95 backdrop-blur-2xl border border-white/10 shadow-2xl flex flex-col z-50 transform translate-y-6 opacity-0 pointer-events-none transition-all duration-300"
+     id="chat-panel" style="width:340px; height:520px;">
+
+  <!-- Header -->
+  <div class="flex items-center gap-3 p-4 border-b border-white/10">
+    <div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
+      <span class="material-symbols-outlined">bolt</span>
+    </div>
+    <div class="flex-1">
+      <h5 class="text-primary font-bold text-sm">Delivery AI Туслах</h5>
+      <div class="flex items-center gap-1">
+        <span class="w-2 h-2 bg-secondary rounded-full animate-pulse inline-block"></span>
+        <p class="text-[10px] text-on-surface-variant">Онлайн · AI туслах</p>
+      </div>
+    </div>
+    <button onclick="closeChat()" class="text-on-surface-variant hover:text-primary transition-colors">
+      <span class="material-symbols-outlined text-xl">close</span>
+    </button>
+  </div>
+
+  <!-- Messages -->
+  <div class="flex-1 overflow-y-auto p-4 space-y-3 chat-messages" id="chat-messages">
+    <div class="flex justify-start">
+      <div class="bg-surface-variant/70 p-3 rounded-2xl rounded-tl-none max-w-[85%] text-sm leading-relaxed">
+        Сайн байна уу! 👋 Би Delivery AI-ийн туслах байна.<br>Захиалга, хүргэлтийн талаар асуугаарай.
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick buttons -->
+  <div class="px-4 pb-2 flex gap-2 flex-wrap" id="quick-btns">
+    <button onclick="quickSend('Нийт захиалга хэд байна?')"
+      class="text-[11px] bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full text-primary hover:bg-primary/20 transition-all">
+      📦 Захиалга
+    </button>
+    <button onclick="quickSend('Хүргэлтийн үнэ хэд вэ?')"
+      class="text-[11px] bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full text-primary hover:bg-primary/20 transition-all">
+      💰 Үнэ
+    </button>
+    <button onclick="quickSend('Хүргэлт хэдэн өдөрт ирдэг вэ?')"
+      class="text-[11px] bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full text-primary hover:bg-primary/20 transition-all">
+      🚚 Хугацаа
+    </button>
+  </div>
+
+  <!-- Input -->
+  <div class="p-4 pt-2 border-t border-white/5 flex gap-2">
+    <input id="chat-input" type="text"
+      class="flex-1 bg-surface-container-high border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary/50 placeholder-on-surface-variant/50"
+      placeholder="Асуултаа бичнэ үү..."
+      onkeydown="if(event.key==='Enter')sendMessage()"/>
+    <button onclick="sendMessage()"
+      class="bg-primary p-3 rounded-xl text-on-primary hover:scale-105 transition-all neon-glow" id="send-btn">
+      <span class="material-symbols-outlined text-lg">send</span>
+    </button>
+  </div>
+</div>
+
+<!-- FAB toggle button -->
+<button class="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary text-on-primary flex items-center justify-center neon-glow z-50 hover:scale-110 transition-all duration-200"
+        id="chat-toggle" onclick="toggleChat()">
+  <span class="material-symbols-outlined text-2xl" id="chat-icon">chat</span>
+  <span class="material-symbols-outlined text-2xl hidden" id="close-icon">close</span>
+</button>
+
+<script>
+  const API = "https://capstone-backend-oi8j.onrender.com";
+  let chatOpen = false;
+  let sessionId = "";
+
+  function toggleChat() {
+    chatOpen ? closeChat() : openChat();
+  }
+
+  function openChat() {
+    chatOpen = true;
+    const panel = document.getElementById('chat-panel');
+    panel.classList.remove('translate-y-6','opacity-0','pointer-events-none');
+    panel.classList.add('translate-y-0','opacity-100','pointer-events-auto');
+    document.getElementById('chat-icon').classList.add('hidden');
+    document.getElementById('close-icon').classList.remove('hidden');
+    document.getElementById('chat-input').focus();
+  }
+
+  function closeChat() {
+    chatOpen = false;
+    const panel = document.getElementById('chat-panel');
+    panel.classList.add('translate-y-6','opacity-0','pointer-events-none');
+    panel.classList.remove('translate-y-0','opacity-100','pointer-events-auto');
+    document.getElementById('chat-icon').classList.remove('hidden');
+    document.getElementById('close-icon').classList.add('hidden');
+  }
+
+  function quickSend(text) {
+    document.getElementById('chat-input').value = text;
+    sendMessage();
+  }
+
+  function addMessage(text, isUser) {
+    const msgs = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = 'flex ' + (isUser ? 'justify-end' : 'justify-start');
+    div.innerHTML = `<div class="${isUser
+      ? 'bg-primary/20 border border-primary/30 rounded-2xl rounded-tr-none'
+      : 'bg-surface-variant/70 rounded-2xl rounded-tl-none'
+    } p-3 max-w-[85%] text-sm leading-relaxed">${text}</div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+    return div;
+  }
+
+  function addTyping() {
+    const msgs = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = 'flex justify-start';
+    div.id = 'typing-indicator';
+    div.innerHTML = `<div class="bg-surface-variant/70 p-3 rounded-2xl rounded-tl-none flex gap-1 items-center">
+      <span class="w-2 h-2 bg-primary/60 rounded-full typing-dot"></span>
+      <span class="w-2 h-2 bg-primary/60 rounded-full typing-dot"></span>
+      <span class="w-2 h-2 bg-primary/60 rounded-full typing-dot"></span>
+    </div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function removeTyping() {
+    const t = document.getElementById('typing-indicator');
+    if (t) t.remove();
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    // Hide quick buttons after first message
+    document.getElementById('quick-btns').style.display = 'none';
+
+    input.value = '';
+    document.getElementById('send-btn').disabled = true;
+    addMessage(text, true);
+    addTyping();
+
+    try {
+      const res = await fetch(`${API}/api/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,
+          session_id: sessionId,
+          channel: 'web',
+          token: ''
+        })
+      });
+      const data = await res.json();
+      removeTyping();
+      if (data.session_id) sessionId = data.session_id;
+      addMessage(data.answer || 'Уучлаарай, алдаа гарлаа.', false);
+    } catch (e) {
+      removeTyping();
+      addMessage('Серверт холбогдоход алдаа гарлаа. Дахин оролдоно уу.', false);
+    }
+
+    document.getElementById('send-btn').disabled = false;
+    document.getElementById('chat-input').focus();
+  }
+
+  // Smooth scroll
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
+    });
+  });
+
+  // Navbar scroll effect
+  window.addEventListener('scroll', () => {
+    const nav = document.getElementById('navbar');
+    if (window.scrollY > 50) {
+      nav.classList.add('py-2','bg-surface/90');
+      nav.classList.remove('py-4','bg-surface/70');
+    } else {
+      nav.classList.add('py-4','bg-surface/70');
+      nav.classList.remove('py-2','bg-surface/90');
+    }
+  });
+</script>
+</body>
+</html>
