@@ -4,7 +4,7 @@ import requests
 import streamlit as st
 import pandas as pd
 
-API_URL = os.getenv("API_URL", "http://localhost:8000")
+API_URL = os.getenv("API_URL", "http://localhost:8001")
 ROLE_INFO = {
     "CUSTOMER": ("📦", "Бараа авах хэрэглэгч", "#63b3ed"),
     "SHOP":     ("🏪", "Online дэлгүүр",        "#68d391"),
@@ -145,6 +145,10 @@ def show_login():
         </a>
         <div style="text-align:center;margin-top:2rem;color:rgba(255,255,255,0.25);font-size:.75rem;">
             Google OAuth 2.0 — аюулгүй нэвтрэлт
+        </div>
+        <div style="text-align:center;margin-top:.8rem;font-family:'Space Mono',monospace;
+                    color:rgba(99,179,237,0.45);font-size:.7rem;">
+            🔗 Backend: {API_URL}
         </div>
         """, unsafe_allow_html=True)
 
