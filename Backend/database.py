@@ -172,6 +172,66 @@ def get_messages(session_id, limit=50):
     return rows
 
 
+def init_delivery_requests_table():
+    conn = get_connection()
+    cur  = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS baynaa.delivery_requests (
+            id              VARCHAR(36) PRIMARY KEY,
+            user_id         VARCHAR(255),
+            session_id      VARCHAR(36),
+            item            TEXT,
+            pickup_address  TEXT,
+            dropoff_address TEXT,
+            recipient_name  VARCHAR(255),
+            recipient_phone VARCHAR(50),
+            status          VARCHAR(30) DEFAULT 'NEW',
+            created_at      TIMESTAMP DEFAULT NOW()
+        )
+    """)
+    conn.commit()
+    conn.close()
+    print("[DB] ✅ delivery_requests хүснэгт бэлэн")
+
+
+def create_delivery_request(user_id, session_id, item, pickup_address,
+                            dropoff_address, recipient_name, recipient_phone):
+    rid  = str(uuid.uuid4())
+    conn = get_connection()
+    cur  = conn.cursor()
+    cur.execute("""
+        INSERT INTO baynaa.delivery_requests
+            (id, user_id, session_id, item, pickup_address,
+             dropoff_address, recipient_name, recipient_phone, status)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'NEW')
+    """, (rid, user_id, session_id, item, pickup_address,
+          dropoff_address, recipient_name, recipient_phone))
+    conn.commit()
+    conn.close()
+    print(f"[DB] ✅ Захиалга бүртгэгдлээ: #{rid[:8]}  item={str(item)[:40]}")
+    return rid
+
+
+def maybe_create_order(llm_result, user_id, session_id):
+    """ORDER_REQUEST хариунд бүрэн 'order' байвал DB-д бүртгээд
+    баталгаажуулсан текст нэмж буцаана. Бусад тохиолдолд answer-ийг хэвээр буцаана."""
+    answer = llm_result.get("answer", "")
+    order  = llm_result.get("order")
+    if llm_result.get("capability") == "ORDER_REQUEST" and order:
+        try:
+            rid = create_delivery_request(
+                user_id, session_id,
+                order.get("item"),            order.get("pickup_address"),
+                order.get("dropoff_address"), order.get("recipient_name"),
+                order.get("recipient_phone"),
+            )
+            answer += f"\n\n📦 Таны захиалга #{rid[:8]} амжилттай бүртгэгдлээ! Удахгүй холбогдох болно."
+        except Exception as e:
+            print(f"[DB] ❌ Захиалга бүртгэхэд алдаа: {e}")
+            answer += "\n\n⚠️ Уучлаарай, захиалгыг бүртгэхэд алдаа гарлаа. Дахин оролдоно уу."
+    return answer
+
+
 def save_llm_log(message_id, model, prompt_tokens, completion_tokens, latency_ms, use_case="chat"):
     lid  = str(uuid.uuid4())
     conn = get_connection()

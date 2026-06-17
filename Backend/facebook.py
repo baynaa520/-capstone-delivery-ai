@@ -6,6 +6,7 @@ from database import (
     get_schema, run_query,
     get_session_by_user, create_session,
     save_message, get_messages, save_llm_log,
+    maybe_create_order,
 )
 from llm import route_and_respond, generate_answer
 from rag import search_docs
@@ -68,7 +69,7 @@ async def handle_fb_message(sender_id: str, text: str):
                 answer = "Уучлаарай, өгөгдлийг татахад алдаа гарлаа."
                 rows   = []
         else:
-            answer = llm.get("answer", "Уучлаарай, хариулж чадсангүй.")
+            answer = maybe_create_order(llm, user_id, sid) or "Уучлаарай, хариулж чадсангүй."
             rows   = []
 
         save_message(sid, "user",      text)

@@ -11,6 +11,7 @@ from database import (
    get_schema, run_query, check_connection,
    get_session_by_user, create_session,
    save_message, get_messages, save_llm_log,
+   init_delivery_requests_table, maybe_create_order,
 )
 from db_users import init_users_table, get_or_create_user, update_user_role
 from llm import route_and_respond, generate_answer
@@ -42,6 +43,7 @@ oauth.register(
 @app.on_event("startup")
 async def startup():
    init_users_table()
+   init_delivery_requests_table()
    print("[APP] ✅ Startup дууслаа")
 
 
@@ -253,7 +255,7 @@ def api_message(body: MessageRequest):
        else:
            sql    = ""
            rows   = []
-           answer = llm.get("answer", "Уучлаарай, хариулж чадсангүй.")
+           answer = maybe_create_order(llm, user_id, sid) or "Уучлаарай, хариулж чадсангүй."
            print(f"[API] 5. Хариу: {answer[:80]}")
 
 
