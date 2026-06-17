@@ -1,9 +1,9 @@
 import os
 import time
 import traceback
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, PlainTextResponse
 from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 from authlib.integrations.starlette_client import OAuth
@@ -16,6 +16,7 @@ from db_users import init_users_table, get_or_create_user, update_user_role
 from llm import route_and_respond, generate_answer
 from rag import search_docs
 from auth import create_token, decode_token, SESSION_SECRET, FRONTEND_URL
+from facebook import handle_fb_message, FB_VERIFY_TOKEN
 
 app = FastAPI(title="Delivery AI Assistant")
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET,
@@ -232,3 +233,37 @@ def api_message(body: MessageRequest):
         print(f"[API] ❌ АЛДАА: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Системийн алдаа гарлаа.")
+
+
+# ── Facebook Messenger webhook ────────────────────────────────
+
+@app.get("/webhook/facebook")
+async def fb_verify(request: Request):
+    """Facebook-ийн webhook verification"""
+    mode      = request.query_params.get("hub.mode")
+    token     = request.query_params.get("hub.verify_token")
+    challenge = request.query_params.get("hub.challenge", "")
+    if mode == "subscribe" and token == FB_VERIFY_TOKEN:
+        print(f"[FB] ✅ Webhook баталгаажлаа")
+        return PlainTextResponse(challenge)
+    print(f"[FB] ❌ Verify token буруу: {token!r}")
+    raise HTTPException(status_code=403, detail="Verify token буруу")
+
+
+@app.post("/webhook/facebook")
+async def fb_webhook(request: Request, background_tasks: BackgroundTasks):
+    """Facebook Messenger мессеж хүлээн авах"""
+    body = await request.json()
+    if body.get("object") == "page":
+        for entry in body.get("entry", []):
+            for event in entry.get("messaging", []):
+                if "message" not in event:
+                    continue
+                if event["message"].get("is_echo"):
+                    continue
+                sender_id = event["sender"]["id"]
+                text      = event["message"].get("text", "").strip()
+                if text:
+                    print(f"[FB] 📩 Шинэ мессеж: sender={sender_id}  text={text[:60]}")
+                    background_tasks.add_task(handle_fb_message, sender_id, text)
+    return {"status": "ok"}
