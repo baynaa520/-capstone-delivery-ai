@@ -137,7 +137,7 @@ def route_and_respond(question, history, schema, rag_content="",
     import time
     t0   = time.time()
     resp = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-5.4-mini",
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
         max_tokens=800,
