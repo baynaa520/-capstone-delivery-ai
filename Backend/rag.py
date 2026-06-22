@@ -10,10 +10,12 @@ DB_KEYWORDS = {
     "бүтээгдэхүүн", "захиалга", "компани", "борлуулалт",
 }
 
-# RAG-т хамааралтай үгс — эдгээр байвал хайна
+# RAG-т хамааралтай үгс — эдгээр байвал хайна.
+# (substring-аар таарна тул "хүргэлт" нь "хүргэлтийн"-д, "үнэ" нь "үнэтэй"-д таарна)
 RAG_KEYWORDS = {
     "журам", "нөхцөл", "дүрэм", "гэрээ", "баталгаа", "буцаалт",
     "цуцлах", "төлбөр", "хүргэлт", "хугацаа", "боломжтой",
+    "үнэ", "тариф", "хөлс",
 }
 
 
@@ -24,9 +26,10 @@ def search_docs(query, top_k=3):
     q_lower = query.lower()
     words   = set(re.findall(r'\w+', q_lower))
 
-    # DB асуулт бол RAG буцаахгүй
-    db_hits  = words & DB_KEYWORDS
-    rag_hits = words & RAG_KEYWORDS
+    # DB асуулт бол RAG буцаахгүй.
+    # substring-аар шалгана — монгол нөхцөл (хүргэлт → хүргэлтийн) -ийг таахын тулд.
+    db_hits  = {k for k in DB_KEYWORDS  if k in q_lower}
+    rag_hits = {k for k in RAG_KEYWORDS if k in q_lower}
 
     if db_hits and not rag_hits:
         print(f"[RAG] DB асуулт ({db_hits}) → RAG алгасав")
