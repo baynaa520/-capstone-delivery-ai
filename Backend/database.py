@@ -7,13 +7,20 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DB_CONFIG = {
-    "host":            os.getenv("PGHOST",     "ep-icy-silence-aq70iajz.c-8.us-east-1.aws.neon.tech"),
-    "database":        os.getenv("PGDATABASE", "neondb"),
-    "user":            os.getenv("PGUSER",     "neondb_owner"),
-    "password":        os.getenv("PGPASSWORD", "npg_4yXJFPikOV2u"),
+    "host":            os.getenv("PGHOST"),
+    "database":        os.getenv("PGDATABASE"),
+    "user":            os.getenv("PGUSER"),
+    "password":        os.getenv("PGPASSWORD"),
     "sslmode":         "require",
     "connect_timeout": 10,
 }
+
+_missing = [k for k in ("host", "database", "user", "password") if not DB_CONFIG[k]]
+if _missing:
+    raise RuntimeError(
+        "DB тохиргоо дутуу байна. Backend/.env файлд дараах хувьсагчуудыг "
+        f"оруулна уу: {', '.join('PG' + k.upper() for k in _missing)}"
+    )
 
 
 def get_connection():
@@ -159,12 +166,19 @@ def get_messages(session_id, limit=50):
     print(f"[DB] Messages татаж байна → session={session_id[:8]}... limit={limit}")
     conn = get_connection()
     cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    # Хамгийн СҮҮЛИЙН `limit` мессежийг авч, дараа нь цаг хугацааны дарааллаар
+    # эрэмбэлж буцаана. (Өмнө нь ASC LIMIT байсан тул урт яриа дээр хамгийн
+    # ХУУЧИН мессежүүд л router-т тэжээгдэж, бүх асуултыг буруугаар INTRO болгодог
+    # байсан.)
     cur.execute("""
-        SELECT role, content, created_at
-        FROM baynaa.messages
-        WHERE session_id = %s
+        SELECT role, content, created_at FROM (
+            SELECT role, content, created_at
+            FROM baynaa.messages
+            WHERE session_id = %s
+            ORDER BY created_at DESC
+            LIMIT %s
+        ) recent
         ORDER BY created_at ASC
-        LIMIT %s
     """, (session_id, limit))
     rows = [dict(r) for r in cur.fetchall()]
     conn.close()

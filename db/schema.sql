@@ -1,93 +1,156 @@
 -- ============================================================
---  Capstone – Online Shop Database
---  Neon PostgreSQL
+--  Capstone – Delivery AI Assistant
+--  Neon PostgreSQL — БОДИТ production schema
+--
+--  ⚠️ Энэ файл нь жинхэнэ өгөгдлийн сангийн бүтцийг баримтжуулна.
+--     AI-н DB_QUERY чадамж (Backend/llm.py) эдгээр хүснэгтийг
+--     дараах JOIN-уудаар хайдаг:
+--       fact_orders.customer_id      → dim_customers.id
+--       fact_order_status.order_id   → fact_orders.id
+--       fact_order_status.driver_id  → dim_drivers.id
+--     Бүх dim_/fact_ хүснэгт SCD2 (is_current/effective_date/expiry_date)
+--     загвартай тул query-д ЗААВАЛ  WHERE is_current = true  нэмнэ.
 -- ============================================================
 
--- Companies (Компаниуд)
-CREATE TABLE IF NOT EXISTS companies (
-    id         SERIAL PRIMARY KEY,
-    name       VARCHAR(100) NOT NULL,
-    email      VARCHAR(100),
-    phone      VARCHAR(20),
-    address    TEXT,
+
+-- ── Хэмжээст хүснэгтүүд (dimensions, SCD2) ──────────────────
+
+-- Харилцагч / компани (Хэрэглэгч, дэлгүүр)
+CREATE TABLE IF NOT EXISTS dim_customers (
+    id              UUID PRIMARY KEY,
+    customer_name   VARCHAR,
+    registry_number VARCHAR,
+    phone_number    VARCHAR,
+    email           VARCHAR,
+    created_at      TIMESTAMP DEFAULT NOW(),
+    -- SCD2
+    is_current      BOOLEAN DEFAULT TRUE,
+    effective_date  TIMESTAMP,
+    expiry_date     TIMESTAMP
+);
+
+-- Жолооч (хүргэлтийн ажилтан)
+CREATE TABLE IF NOT EXISTS dim_drivers (
+    id              UUID PRIMARY KEY,
+    firstname       VARCHAR,
+    lastname        VARCHAR,
+    registry_number VARCHAR,
+    phone_number    VARCHAR,
+    email           VARCHAR,
+    birthday        DATE,
+    plate_number    VARCHAR,
+    bank_account    VARCHAR,
+    created_at      TIMESTAMP DEFAULT NOW(),
+    -- SCD2
+    is_current      BOOLEAN DEFAULT TRUE,
+    effective_date  TIMESTAMP,
+    expiry_date     TIMESTAMP
+);
+
+
+-- ── Баримтат хүснэгтүүд (facts, SCD2) ───────────────────────
+
+-- Захиалга / хүргэлт
+CREATE TABLE IF NOT EXISTS fact_orders (
+    id                    UUID PRIMARY KEY,
+    customer_id           UUID REFERENCES dim_customers(id),  -- → dim_customers.id
+    delivery_phone_number VARCHAR,
+    hot_aimag             VARCHAR,        -- хот/аймаг
+    sum_duureg            VARCHAR,        -- сум/дүүрэг
+    address               TEXT,
+    products              JSONB,          -- захиалгын барааны жагсаалт (JSON)
+    is_prepaid            BOOLEAN,
+    customer_fee          NUMERIC,        -- харилцагчаас авах төлбөр
+    delivery_fee          NUMERIC,        -- хүргэлтийн төлбөр
+    created_at            TIMESTAMP DEFAULT NOW(),
+    -- SCD2
+    is_current            BOOLEAN DEFAULT TRUE,
+    effective_date        TIMESTAMP,
+    expiry_date           TIMESTAMP
+);
+
+-- Захиалгын төлөв (статусын түүх)
+CREATE TABLE IF NOT EXISTS fact_order_status (
+    id             UUID PRIMARY KEY,
+    order_id       UUID REFERENCES fact_orders(id),   -- → fact_orders.id
+    driver_id      UUID REFERENCES dim_drivers(id),   -- → dim_drivers.id
+    status         VARCHAR,    -- pending / picked / shipped / delivered / cancelled ...
+    note           TEXT,
+    created_at     TIMESTAMP DEFAULT NOW(),
+    -- SCD2
+    is_current     BOOLEAN DEFAULT TRUE,
+    effective_date TIMESTAMP,
+    expiry_date    TIMESTAMP
+);
+
+-- Гомдол / санал хүсэлт
+CREATE TABLE IF NOT EXISTS complaints (
+    id              TEXT PRIMARY KEY,
+    agency          TEXT,
+    content         TEXT,
+    source_text     TEXT,
+    status_text     TEXT,
+    type_text       TEXT,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    created_at_unix BIGINT
+);
+
+
+-- ── Аппликейшн / чатын хүснэгтүүд ───────────────────────────
+--  (Эдгээрийг Backend-ийн init функцууд автоматаар үүсгэдэг:
+--   db_users.init_users_table, database.init_delivery_requests_table)
+
+-- Google OAuth-аар нэвтэрсэн хэрэглэгчид
+CREATE TABLE IF NOT EXISTS app_users (
+    id         VARCHAR(36)  PRIMARY KEY,
+    google_id  VARCHAR(255) UNIQUE,
+    email      VARCHAR(255) UNIQUE NOT NULL,
+    name       VARCHAR(255),
+    role       VARCHAR(20),     -- CUSTOMER / SHOP / EMPLOYEE
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Products (Бүтээгдэхүүн)
-CREATE TABLE IF NOT EXISTS products (
-    id          SERIAL PRIMARY KEY,
-    name        VARCHAR(150) NOT NULL,
-    description TEXT,
-    price       NUMERIC(12,2) NOT NULL,
-    stock       INT DEFAULT 0,
-    category    VARCHAR(80),
+-- Чатаар бүртгэгдсэн шинэ хүргэлтийн хүсэлт (ORDER_REQUEST)
+CREATE TABLE IF NOT EXISTS baynaa.delivery_requests (
+    id              VARCHAR(36) PRIMARY KEY,
+    user_id         VARCHAR(255),
+    session_id      VARCHAR(36),
+    item            TEXT,
+    pickup_address  TEXT,
+    dropoff_address TEXT,
+    recipient_name  VARCHAR(255),
+    recipient_phone VARCHAR(50),
+    status          VARCHAR(30) DEFAULT 'NEW',
+    created_at      TIMESTAMP DEFAULT NOW()
+);
+
+-- Чатын session-ууд
+CREATE TABLE IF NOT EXISTS baynaa.sessions (
+    id         VARCHAR(36) PRIMARY KEY,
+    user_id    VARCHAR(255),
+    title      TEXT,
+    started_at TIMESTAMP DEFAULT NOW(),
+    msg_count  INT DEFAULT 0
+);
+
+-- Чатын мессежүүд
+CREATE TABLE IF NOT EXISTS baynaa.messages (
+    id          VARCHAR(36) PRIMARY KEY,
+    session_id  VARCHAR(36) REFERENCES baynaa.sessions(id),
+    role        VARCHAR(20),    -- user / assistant
+    content     TEXT,
+    token_count INT DEFAULT 0,
     created_at  TIMESTAMP DEFAULT NOW()
 );
 
--- Orders (Захиалга)
-CREATE TABLE IF NOT EXISTS orders (
-    id            SERIAL PRIMARY KEY,
-    company_id    INT REFERENCES companies(id),
-    total_amount  NUMERIC(14,2),
-    status        VARCHAR(30) DEFAULT 'pending',  -- pending / confirmed / shipped / delivered / cancelled
-    ordered_at    TIMESTAMP DEFAULT NOW(),
-    delivered_at  TIMESTAMP
+-- LLM дуудлагын лог (хяналт / зардал)
+CREATE TABLE IF NOT EXISTS baynaa.llm_logs (
+    id                VARCHAR(36) PRIMARY KEY,
+    message_id        VARCHAR(36),
+    model             VARCHAR(50),
+    prompt_tokens     INT,
+    completion_tokens INT,
+    cost_usd          NUMERIC(12,8),
+    latency_ms        INT,
+    use_case          VARCHAR(30)
 );
-
--- Order Items (Захиалгын дэлгэрэнгүй)
-CREATE TABLE IF NOT EXISTS order_items (
-    id         SERIAL PRIMARY KEY,
-    order_id   INT REFERENCES orders(id),
-    product_id INT REFERENCES products(id),
-    quantity   INT NOT NULL,
-    unit_price NUMERIC(12,2) NOT NULL
-);
-
--- ── Sample Data ─────────────────────────────────────────────
-
-INSERT INTO companies (name, email, phone, address) VALUES
-    ('Монгол Трейд ХХК',   'info@mongoltrade.mn',  '7711-0001', 'Улаанбаатар, СБД 1-р хороо'),
-    ('Говь Экспорт ХХК',   'order@goviexport.mn',  '7711-0002', 'Улаанбаатар, БЗД 5-р хороо'),
-    ('Номин Дистрибьютор', 'noming@nomin.mn',       '7711-0003', 'Улаанбаатар, ХУД 3-р хороо'),
-    ('Стар Ложистик ХХК',  'logistics@star.mn',     '7711-0004', 'Дархан хот'),
-    ('Эрдэнэт Трейд',      'trade@erdenet.mn',      '7711-0005', 'Эрдэнэт хот')
-ON CONFLICT DO NOTHING;
-
-INSERT INTO products (name, description, price, stock, category) VALUES
-    ('Зурагт 55"',        'Samsung 4K QLED телевиз',          1850000, 25, 'Электроник'),
-    ('Зөөврийн компьютер','Lenovo ThinkPad 14", i5, 16GB RAM', 3200000, 12, 'Электроник'),
-    ('Гар утас',          'iPhone 15 128GB',                   2900000, 40, 'Электроник'),
-    ('Хөргөгч',           'LG 350L хоёр хаалгатай',            1450000, 18, 'Ахуйн техник'),
-    ('Угаалгын машин',    'Samsung 7кг автомат',                980000, 22, 'Ахуйн техник'),
-    ('Гал тогооны иж',    'Bosch зуух + хийн плита',           1200000, 15, 'Ахуйн техник'),
-    ('Офисын сандал',     'Ergonomic chair, хар',               450000, 50, 'Тавилга'),
-    ('Бичгийн ширээ',     '160x80 L-shape ширээ',               380000, 30, 'Тавилга'),
-    ('Принтер',           'HP LaserJet Pro',                    620000, 20, 'Оффис'),
-    ('Проектор',          'Epson 3500 lm',                     1100000, 8,  'Оффис')
-ON CONFLICT DO NOTHING;
-
-INSERT INTO orders (company_id, total_amount, status, ordered_at, delivered_at) VALUES
-    (1, 7250000,  'delivered',  '2026-04-01', '2026-04-05'),
-    (1, 3200000,  'delivered',  '2026-04-10', '2026-04-14'),
-    (2, 5800000,  'shipped',    '2026-04-15', NULL),
-    (3, 1960000,  'confirmed',  '2026-04-20', NULL),
-    (3, 9600000,  'delivered',  '2026-03-05', '2026-03-10'),
-    (4, 2400000,  'pending',    '2026-05-01', NULL),
-    (4, 4350000,  'delivered',  '2026-03-20', '2026-03-25'),
-    (5, 760000,   'cancelled',  '2026-04-25', NULL),
-    (5, 3300000,  'delivered',  '2026-05-05', '2026-05-08'),
-    (2, 1100000,  'confirmed',  '2026-05-10', NULL)
-ON CONFLICT DO NOTHING;
-
-INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES
-    (1, 1, 2, 1850000), (1, 9, 3, 620000),   -- Зурагт x2, Принтер x3 (→7250000? ойролцоо)
-    (2, 2, 1, 3200000),                        -- Laptop x1
-    (3, 3, 2, 2900000),                        -- Утас x2
-    (4, 5, 2, 980000),                         -- Угаалгын машин x2
-    (5, 2, 3, 3200000),                        -- Laptop x3
-    (6, 8, 3, 380000), (6, 7, 3, 450000),     -- Ширээ, сандал x3
-    (7, 4, 3, 1450000),                        -- Хөргөгч x3
-    (8, 6, 1, 760000),                         -- Иж x1
-    (9, 10, 3, 1100000),                       -- Проектор x3
-    (10, 10, 1, 1100000)                       -- Проектор x1
-ON CONFLICT DO NOTHING;
