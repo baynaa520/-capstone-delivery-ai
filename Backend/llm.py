@@ -132,7 +132,7 @@ def route_and_respond(question, history, schema, rag_content="",
               .replace("__RAG_CONTENT__",  rag_text))
 
     print(f"[LLM] Role=[{user_role}]  Түүх={len(history)}  RAG={'тийм' if rag_content else 'үгүй'}")
-    print(f"[LLM] OpenAI gpt-4o-mini дуудаж байна (router)...")
+    print(f"[LLM] OpenAI router дуудаж байна...")
 
     import time
     t0   = time.time()
@@ -140,7 +140,7 @@ def route_and_respond(question, history, schema, rag_content="",
         model="gpt-5.4-mini",
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
-        max_tokens=800,
+        max_completion_tokens=800,
     )
     ms  = int((time.time() - t0) * 1000)
     raw = resp.choices[0].message.content.strip()
@@ -179,7 +179,7 @@ def generate_answer(question, data):
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
-        max_tokens=300,
+        max_completion_tokens=300,
     )
     ms     = int((time.time() - t0) * 1000)
     answer = resp.choices[0].message.content.strip()
